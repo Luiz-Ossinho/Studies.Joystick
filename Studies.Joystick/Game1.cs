@@ -43,30 +43,24 @@ namespace Studies.Joystick
 
             Ball = new Ball(Content);
             font = Content.Load<SpriteFont>("font");
-
             DualStick = new DualStick(font);
 
-            //var aliveZoneFollowFactor = 1.3f;
-            //DualStick.LeftStick.FixedLocation = new Vector2(TouchTwinStick.AliveZoneSize * aliveZoneFollowFactor, TouchPanel.DisplayHeight - TouchTwinStick.AliveZoneSize * aliveZoneFollowFactor);
-
-            DualStick.LeftStick.Style = TouchStickStyle.Free;
-            DualStick.RightStick.Style = TouchStickStyle.Free;
+            DualStick.LeftStick.SetAsFree();
+            DualStick.RightStick.SetAsFree();
 
             _spriteBatch = new SpriteBatch(GraphicsDevice);
         }
 
         protected override void Update(GameTime gameTime)
         {
-            DualStick.Update((float)gameTime.ElapsedGameTime.TotalMilliseconds);
-
             _tiledMapRenderer.Update(gameTime);
 
+            DualStick.Update(gameTime);
             var relativePostion = new
             {
                 Left = DualStick.LeftStick.GetRelativeVector(DualStick.aliveZoneSize),
-                Right = DualStick.LeftStick.GetRelativeVector(DualStick.aliveZoneSize)
+                Right = DualStick.RightStick.GetRelativeVector(DualStick.aliveZoneSize)
             };
-
             Ball.Move(relativePostion.Left, gameTime);
             _camera.LookAt(Ball.Position + relativePostion.Right);
 
