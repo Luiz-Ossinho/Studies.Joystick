@@ -14,7 +14,7 @@ namespace Studies.Joystick.GameObjects
         {
             Texture = CM.Load<Texture2D>("ball");
             Position = new Vector2(TouchPanel.DisplayWidth / 2, TouchPanel.DisplayHeight / 2);
-            Speed = 0.6f;
+            Speed = 0.006f;
         }
 
         public void Draw(SpriteBatch batch)

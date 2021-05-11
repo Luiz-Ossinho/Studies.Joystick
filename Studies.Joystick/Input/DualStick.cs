@@ -17,8 +17,6 @@ namespace Studies.Joystick.Input
         // Where touches register, if they first land beyond this point,
         // the touch wont be registered as occuring inside the stick
         public readonly float aliveZoneSize;
-        // Current state of the TouchPanel
-        private TouchCollection state;
         // Keeps information of last 4 taps
         private readonly TapStart[] tapStarts = new TapStart[4];
         private int tapStartCount = 0;
@@ -33,12 +31,14 @@ namespace Studies.Joystick.Input
             this.font = font;
 
             LeftStick = new Stick(deadZoneSize,
-                 new Rectangle(0, 100, (int)(TouchPanel.DisplayWidth * 0.3f), TouchPanel.DisplayHeight - 100))
+                 new Rectangle(0, 100, (int)(TouchPanel.DisplayWidth * 0.3f), TouchPanel.DisplayHeight - 100),
+                 aliveZoneSize, aliveZoneFollowFactor, aliveZoneFollowSpeed, edgeSpacing)
             {
                 FixedLocation = new Vector2(aliveZoneSize * aliveZoneFollowFactor, TouchPanel.DisplayHeight - aliveZoneSize * aliveZoneFollowFactor)
             };
             RightStick = new Stick(deadZoneSize,
-                new Rectangle((int)(TouchPanel.DisplayWidth * 0.5f), 100, (int)(TouchPanel.DisplayWidth * 0.5f), TouchPanel.DisplayHeight - 100))
+                new Rectangle((int)(TouchPanel.DisplayWidth * 0.5f), 100, (int)(TouchPanel.DisplayWidth * 0.5f), TouchPanel.DisplayHeight - 100),
+                aliveZoneSize, aliveZoneFollowFactor, aliveZoneFollowSpeed, edgeSpacing)
             {
                 FixedLocation = new Vector2(TouchPanel.DisplayWidth - aliveZoneSize * aliveZoneFollowFactor, TouchPanel.DisplayHeight - aliveZoneSize * aliveZoneFollowFactor)
             };
@@ -49,11 +49,12 @@ namespace Studies.Joystick.Input
         private readonly SpriteFont font;
         public Stick RightStick { get; set; }
         public Stick LeftStick { get; set; }
-        public void Update(float dt)
+        public void Update(GameTime gameTime)
         {
+            var dt = (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             totalTime += dt;
 
-            state = TouchPanel.GetState();
+            var state = TouchPanel.GetState();
             TouchLocation? leftTouch = null, rightTouch = null;
 
             if (tapStartCount > state.Count)
@@ -85,6 +86,7 @@ namespace Studies.Joystick.Input
                     tapStarts[tapStartCount] = new TapStart(loc.Id, totalTime, loc.Position);
                     tapStartCount++;
                 }
+
                 if (LeftStick.touchLocation.HasValue && loc.Id == LeftStick.touchLocation.Value.Id)
                 {
                     leftTouch = loc;
@@ -160,73 +162,10 @@ namespace Studies.Joystick.Input
                     }
                 }
             }
-            if (leftTouch.HasValue)
-            {
-                LeftStick.touchLocation = leftTouch;
-                LeftStick.Pos = leftTouch.Value.Position;
-                LeftStick.EvaluatePoint(dt, aliveZoneSize, aliveZoneFollowFactor, aliveZoneFollowSpeed, edgeSpacing);
-            }
-            else
-            {
-                bool foundNew = false;
-                if (LeftStick.touchLocation.HasValue)
-                {
-                    foreach (TouchLocation loc in state)
-                    {
-                        Vector2 pos = loc.Position;
-                        Vector2.DistanceSquared(ref pos, ref LeftStick.Pos, out float distSqr);
-                        if (distSqr < 100f)
-                        {
-                            foundNew = true;
-                            LeftStick.touchLocation = loc;
-                            LeftStick.Pos = loc.Position;
-                            LeftStick.EvaluatePoint(dt, aliveZoneSize, aliveZoneFollowFactor, aliveZoneFollowSpeed, edgeSpacing);
-                        }
-                    }
-                }
-                if (!foundNew)
-                {
-                    LeftStick.touchLocation = null;
-                    LeftStick.Direction = Vector2.Zero;
-                    LeftStick.Magnitude = 0.0f;
-                }
-            }
 
-            if (rightTouch.HasValue)
-            {
-                RightStick.touchLocation = rightTouch;
-                RightStick.Pos = rightTouch.Value.Position;
-                RightStick.EvaluatePoint(dt, aliveZoneSize, aliveZoneFollowFactor, aliveZoneFollowSpeed, edgeSpacing);
-                //EvaluateRightPoint(RightStick.Pos, dt);
-            }
-            else
-            {
-                bool foundNew = false;
-                if (RightStick.touchLocation.HasValue)
-                {
-                    foreach (TouchLocation loc in state)
-                    {
-                        Vector2 pos = loc.Position;
-                        Vector2.DistanceSquared(ref pos, ref RightStick.Pos, out float distSqr);
-                        if (distSqr < 100f)
-                        {
-                            foundNew = true;
-                            RightStick.touchLocation = loc;
-                            RightStick.Pos = loc.Position;
-                            RightStick.EvaluatePoint(dt, aliveZoneSize, aliveZoneFollowFactor, aliveZoneFollowSpeed, edgeSpacing);
-                            //EvaluateRightPoint(RightStick.Pos, dt);
-                        }
-                    }
-                }
-                if (!foundNew)
-                {
-                    RightStick.touchLocation = null;
-                    RightStick.Direction = Vector2.Zero;
-                    RightStick.Magnitude = 0.0f;
-                }
-            }
+            LeftStick.Update(state, leftTouch, dt);
+            RightStick.Update(state, rightTouch, dt);
         }
-
         public void Draw(SpriteBatch spriteBatch)
         {
             DrawStringCentered($"L", LeftStick.StartLocation, Color.Black, spriteBatch);
